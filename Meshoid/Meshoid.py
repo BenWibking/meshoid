@@ -322,7 +322,7 @@ class Meshoid(object):
         else:
             return np.einsum('ij,ij...->i...', self.sliceweights, f[ngb]).reshape((res,res))
 
-    def SurfaceDensity(self, f=None, size=None, plane='z', center=None, res=128, smooth_fac=1.):
+    def SurfaceDensity(self, f=None, size=None, plane='z', center=None, res=128, smooth_fac=1., zmax=np.inf):
         """
         Computes the surface density of a quantity f defined on the meshoid on a grid of sightlines. e.g. if f is the particle masses, you will get mass surface density.
 
@@ -340,7 +340,17 @@ class Meshoid(object):
         if f is None: f = self.m
         if center is None: center = self.center
         if size is None: size = self.L
-        return GridSurfaceDensity(f, self.pos, np.clip(smooth_fac*self.hsml, 2*size/res,1e100), center, size, res, self.boxsize)
+
+        # permute the coordinates if we project onto a plane other than 'z'
+        shift_axes = {'x': [1,2,0], 'y': [0,2,1], 'z': [0,1,2]}
+        new_axes = np.array(shift_axes[plane])
+
+        permute_pos = self.pos[:, new_axes]
+        permute_center = center[new_axes]
+        
+        return GridSurfaceDensity(f, permute_pos,
+                                  np.clip(smooth_fac*self.hsml, 2*size/res,1e100),
+                                  permute_center, size, res, self.boxsize, zmax=zmax)
 
     def ProjectedAverage(self, f, size=None, plane='z', center=None, res=128, smooth_fac=1.):
         """

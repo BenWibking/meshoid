@@ -126,7 +126,7 @@ def UpsampleGrid(grid):
     return newgrid
     
 @njit(fastmath=True)
-def GridSurfaceDensity(f, x, h, center, size, res=100, box_size=-1):
+def GridSurfaceDensity(f, x, h, center, size, res=100, box_size=-1, zmax=np.inf):
     """
     Computes the surface density of conserved quantity f colocated at positions x with smoothing lengths h. E.g. plugging in particle masses would return mass surface density. The result is on a Cartesian grid of SIGHTLINES (not cells), the result being the density of quantity f integrated along those sightlines.
 
@@ -140,12 +140,17 @@ def GridSurfaceDensity(f, x, h, center, size, res=100, box_size=-1):
     """
     dx = size/(res-1)
 
+    # get projected position (x,y)
     x2d = x[:,:2] - center[:2] + size/2
     
     grid = np.zeros((res,res))
     
-    N = len(x)
-    for i in range(N):
+    N = len(x)  # number of particles
+    for i in range(N):  # loop over particles
+        dz = x[i,2] - center[2]
+        if np.abs(dz) > zmax:
+            continue
+
         xs = x2d[i]
         hs = h[i]
         hinv = 1/hs
